@@ -1,18 +1,30 @@
-from distutils.util import execute
-import sqlite3
+import streamlit as st
+import mysql.connector
 
-dbname = "test.db"
-conn = sqlite3.connect(dbname)
+# Initialize connection.
+# Uses st.experimental_singleton to only run once.
 
-# sqliteを操作するカーソルオブジェクトの作成
-cur = conn.cursor()
 
-cur.execute('SELECT * FROM persons')
+@st.experimental_singleton
+def init_connection():
+    return mysql.connector.connect(**st.secrets["mysql"])
 
-# dbへ情報コミット
-for row in cur:
-    print(row[1])
 
-# db接続を切断
-cur.close()
-conn.close()
+conn = init_connection()
+
+# Perform query.
+# Uses st.experimental_memo to only rerun when the query changes or after 10 min.
+
+
+@st.experimental_memo(ttl=600)
+def run_query(query):
+    with conn.cursor() as cur:
+        cur.execute(query)
+        return cur.fetchall()
+
+
+rows = run_query("SELECT * from mytable;")
+
+# Print results.
+for row in rows:
+    st.write(f"{row[0]} has a :{row[1]}:")
